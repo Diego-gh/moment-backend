@@ -4,6 +4,7 @@
   "description": "image based social network",
   "scripts": {
     "build": "tsc",
+    "clean": "rm -rf dist",
     "dev": "nodemon src/index.ts"
   },
   "repository": {

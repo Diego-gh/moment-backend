@@ -1,5 +1,6 @@
 .env
 .vscode
+*.tsbuildinfo
 node_modules
 package-lock.json
 dist

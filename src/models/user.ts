@@ -15,15 +15,34 @@ const userSchema = new Schema(
       type: String,
       required: true,
     },
-    img: {
-      type: String,
-    },
     hashedPassword: {
       type: String,
       required: true,
     },
+    profileImage: {
+      url: String,
+      publicId: String,
+      default: 'https://example.com/default-profile.jpg',
+    },
+    bannerImage: {
+      url: String,
+      publicId: String,
+      default: 'https://example.com/default-banner.jpg',
+    },
+    followers: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: 'User',
+      },
+    ],
+    following: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: 'User',
+      },
+    ],
   },
   { timestamps: true }
 );
 
-export default mongoose.model('user', userSchema);
+export default mongoose.model('User', userSchema);

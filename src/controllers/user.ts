@@ -1,19 +1,33 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import User from '../models/user';
-import { generateJwtToken } from '../utils/crypto';
+// import { generateJwtToken } from '../utils/crypto';
+import { reservedUsernames } from '../constants';
+import {
+  registerUserParams,
+  loginUserParams,
+  getUserParams,
+} from '../validation/user';
 
-const cookieMaxAge = 30 * 24 * 60 * 60 * 1000; // 30 days
+// const cookieMaxAge = 30 * 24 * 60 * 60 * 1000; // 30 days
 
-export const createUser = async (req: Request, res: Response) => {
+export const registerUser = async (req: Request, res: Response) => {
+  const { error } = registerUserParams.safeParse(req.body);
+
+  if (error) {
+    res.status(400).json({ message: 'Some required fields are missing' });
+    console.error('register user validation error:', error);
+    return;
+  }
+
+  const { displayName, username, email, password } = req.body;
+
+  if (reservedUsernames.includes(username)) {
+    res.status(400).json({ message: 'Username is not available' });
+    return;
+  }
+
   try {
-    const { displayName, username, email, password } = req.body;
-
-    if (!username || !email || !password) {
-      res.status(400).json({ message: 'Some required fields are missing' });
-      return;
-    }
-
     console.log('Creating user with data:', req.body);
 
     const hashedPassword = await bcrypt.hash(password, 10);
@@ -30,13 +44,13 @@ export const createUser = async (req: Request, res: Response) => {
       return;
     }
 
-    const token = generateJwtToken(newUser._id.toString());
+    // const token = generateJwtToken(newUser._id.toString());
 
-    res.cookie('token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: cookieMaxAge,
-    });
+    // res.cookie('token', token, {
+    //   httpOnly: true,
+    //   secure: process.env.NODE_ENV === 'production',
+    //   maxAge: cookieMaxAge,
+    // });
 
     res.status(201).json({ message: 'User created successfully' });
   } catch (error) {
@@ -44,34 +58,18 @@ export const createUser = async (req: Request, res: Response) => {
   }
 };
 
-export const getUser = async (req: Request, res: Response) => {
-  try {
-    const { username } = req.params;
-
-    const user = await User.findOne({ username });
-
-    if (!user) {
-      res.status(404).json({ message: 'User not found' });
-      return;
-    }
-
-    const { hashedPassword, ...userWithoutPassword } = user.toObject();
-
-    res.status(200).json(userWithoutPassword);
-  } catch (error) {
-    res.status(500).json({ message: 'Error fetching user', error });
-  }
-};
-
 export const loginUser = async (req: Request, res: Response) => {
+  const { error } = loginUserParams.safeParse(req.body);
+
+  if (error) {
+    res.status(400).json({ message: 'Some required fields are missing' });
+    console.error('login user validation error:', error);
+    return;
+  }
+
+  const { email, password } = req.body;
+
   try {
-    const { email, password } = req.body;
-
-    if (!email || !password) {
-      res.status(400).json({ message: 'Some required fields are missing' });
-      return;
-    }
-
     const user = await User.findOne({ email });
 
     if (!user) {
@@ -86,13 +84,13 @@ export const loginUser = async (req: Request, res: Response) => {
       return;
     }
 
-    const token = generateJwtToken(user._id.toString());
+    // const token = generateJwtToken(user._id.toString());
 
-    res.cookie('token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: cookieMaxAge,
-    });
+    // res.cookie('token', token, {
+    //   httpOnly: true,
+    //   secure: process.env.NODE_ENV === 'production',
+    //   maxAge: cookieMaxAge,
+    // });
 
     const { hashedPassword, ...userWithoutPassword } = user.toObject();
 
@@ -106,4 +104,31 @@ export const logoutUser = async (req: Request, res: Response) => {
   res.clearCookie('token');
 
   res.status(200).json({ message: 'Logged out successfully' });
+};
+
+export const getUser = async (req: Request, res: Response) => {
+  const { error } = getUserParams.safeParse(req.params);
+
+  if (error) {
+    res.status(400).json({ message: 'Username is required' });
+    console.error('get user validation error:', error);
+    return;
+  }
+
+  const { username } = req.params;
+
+  try {
+    const user = await User.findOne({ username });
+
+    if (!user) {
+      res.status(404).json({ message: 'User not found' });
+      return;
+    }
+
+    const { hashedPassword, ...userWithoutPassword } = user.toObject();
+
+    res.status(200).json(userWithoutPassword);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching user', error });
+  }
 };

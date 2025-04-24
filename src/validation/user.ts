@@ -47,22 +47,28 @@ const followers = z.array(objectId).optional();
 const following = z.array(objectId).optional();
 
 // Validation schemas
-export const registerUserParams = z.object({
-  displayName,
-  username,
-  email,
-  password,
-  profileImage,
-  bannerImage,
-  followers,
-  following,
-});
+export const registerUserParams = z
+  .object({
+    displayName,
+    username,
+    email,
+    password,
+    profileImage,
+    bannerImage,
+    followers,
+    following,
+  })
+  .strict();
 
-export const loginUserParams = z.object({
-  email,
-  password,
-});
+export const loginUserParams = z
+  .object({
+    email,
+    password,
+  })
+  .strict();
 
-export const getUserParams = z.object({
-  username,
-});
+export const getUserParams = z
+  .object({
+    username,
+  })
+  .strict();

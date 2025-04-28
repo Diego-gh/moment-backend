@@ -20,14 +20,12 @@ const userSchema = new Schema(
       required: true,
     },
     profileImage: {
-      url: String,
-      publicId: String,
-      default: 'https://example.com/default-profile.jpg',
+      url: { type: String, default: '' },
+      publicId: { type: String, default: '' },
     },
     bannerImage: {
-      url: String,
-      publicId: String,
-      default: 'https://example.com/default-banner.jpg',
+      url: { type: String, default: '' },
+      publicId: { type: String, default: '' },
     },
     followers: [
       {

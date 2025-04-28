@@ -68,4 +68,6 @@ export const reservedUsernames = [
   'terms',
   'privacy',
   'policy',
+  'customer',
+  'client',
 ];

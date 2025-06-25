@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import User from '../models/user';
-// import { generateJwtToken } from '../utils/crypto';
+import { generateJwtToken } from '../utils/crypto';
 import { reservedUsernames } from '../constants';
 import {
   registerUserParams,
@@ -9,7 +9,8 @@ import {
   getUserParams,
 } from '../validation/user';
 
-// const cookieMaxAge = 30 * 24 * 60 * 60 * 1000; // 30 days
+const cookieMaxAge = 1000 * 60 * 60 * 24 * 30; // 30 days
+const cookieName = 'jwt';
 
 export const registerUser = async (req: Request, res: Response) => {
   const { error } = registerUserParams.safeParse(req.body);
@@ -44,13 +45,13 @@ export const registerUser = async (req: Request, res: Response) => {
       return;
     }
 
-    // const token = generateJwtToken(newUser._id.toString());
+    const token = generateJwtToken(newUser._id.toString());
 
-    // res.cookie('token', token, {
-    //   httpOnly: true,
-    //   secure: process.env.NODE_ENV === 'production',
-    //   maxAge: cookieMaxAge,
-    // });
+    res.cookie(cookieName, token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: cookieMaxAge,
+    });
 
     res.status(201).json({ message: 'User created successfully' });
   } catch (error) {
@@ -84,13 +85,13 @@ export const loginUser = async (req: Request, res: Response) => {
       return;
     }
 
-    // const token = generateJwtToken(user._id.toString());
+    const token = generateJwtToken(user._id.toString());
 
-    // res.cookie('token', token, {
-    //   httpOnly: true,
-    //   secure: process.env.NODE_ENV === 'production',
-    //   maxAge: cookieMaxAge,
-    // });
+    res.cookie(cookieName, token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: cookieMaxAge,
+    });
 
     const { hashedPassword, ...userWithoutPassword } = user.toObject();
 
@@ -101,7 +102,7 @@ export const loginUser = async (req: Request, res: Response) => {
 };
 
 export const logoutUser = async (req: Request, res: Response) => {
-  res.clearCookie('token');
+  res.clearCookie(cookieName);
 
   res.status(200).json({ message: 'Logged out successfully' });
 };

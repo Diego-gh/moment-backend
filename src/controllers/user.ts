@@ -47,13 +47,15 @@ export const registerUser = async (req: Request, res: Response) => {
 
     const token = generateJwtToken(newUser._id.toString());
 
+    const { hashedPassword: _, ...userWithoutPassword } = newUser.toObject();
+
     res.cookie(cookieName, token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       maxAge: cookieMaxAge,
     });
 
-    res.status(201).json({ message: 'User created successfully' });
+    res.status(200).json(userWithoutPassword);
   } catch (error) {
     res.status(500).json({ message: 'Error creating user', error });
   }
@@ -107,7 +109,7 @@ export const logoutUser = async (req: Request, res: Response) => {
   res.status(200).json({ message: 'Logged out successfully' });
 };
 
-export const getUser = async (req: Request, res: Response) => {
+export const getUserData = async (req: Request, res: Response) => {
   const { error } = getUserParams.safeParse(req.params);
 
   if (error) {

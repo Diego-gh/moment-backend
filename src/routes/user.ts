@@ -1,14 +1,14 @@
 import express from 'express';
 import {
   registerUser,
-  getUser,
+  getUserData,
   loginUser,
   logoutUser,
 } from '../controllers/user';
 
 const router = express.Router();
 
-router.get('/:username', getUser);
+router.get('/:username', getUserData);
 router.post('/register', registerUser);
 router.post('/login', loginUser);
 router.post('/logout', logoutUser);

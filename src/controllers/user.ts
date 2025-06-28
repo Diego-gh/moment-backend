@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 import User from '../models/user';
 import { generateJwtToken } from '../utils/crypto';
 import { reservedUsernames } from '../constants';
@@ -12,19 +13,40 @@ import {
 const cookieMaxAge = 1000 * 60 * 60 * 24 * 30; // 30 days
 const cookieName = 'jwt';
 
+interface JwtPayload {
+  userId: string;
+  iat: number;
+}
+
+const removeSensitiveData = (user: any) => {
+  const { _id, hashedPassword, createdAt, updatedAt, __v, ...rest } =
+    user.toObject();
+  return rest;
+};
+
 export const registerUser = async (req: Request, res: Response) => {
   const { error } = registerUserParams.safeParse(req.body);
 
   if (error) {
-    res.status(400).json({ message: 'Some required fields are missing' });
-    console.error('register user validation error:', error);
+    res.status(400); // Bad Request
     return;
   }
 
   const { displayName, username, email, password } = req.body;
 
   if (reservedUsernames.includes(username)) {
-    res.status(400).json({ message: 'Username is not available' });
+    res.status(409);
+    return;
+  }
+
+  try {
+    const existingUser = await User.findOne({ $or: [{ email }, { username }] });
+    if (existingUser) {
+      res.status(409);
+      return;
+    }
+  } catch (error) {
+    res.status(500);
     return;
   }
 
@@ -41,13 +63,13 @@ export const registerUser = async (req: Request, res: Response) => {
     });
 
     if (!newUser) {
-      res.status(500).json({ message: 'Error creating user' });
+      res.status(500);
       return;
     }
 
     const token = generateJwtToken(newUser._id.toString());
 
-    const { hashedPassword: _, ...userWithoutPassword } = newUser.toObject();
+    const userData = removeSensitiveData(newUser);
 
     res.cookie(cookieName, token, {
       httpOnly: true,
@@ -55,9 +77,9 @@ export const registerUser = async (req: Request, res: Response) => {
       maxAge: cookieMaxAge,
     });
 
-    res.status(200).json(userWithoutPassword);
+    res.status(200).json(userData);
   } catch (error) {
-    res.status(500).json({ message: 'Error creating user', error });
+    res.status(500);
   }
 };
 
@@ -65,8 +87,7 @@ export const loginUser = async (req: Request, res: Response) => {
   const { error } = loginUserParams.safeParse(req.body);
 
   if (error) {
-    res.status(400).json({ message: 'Some required fields are missing' });
-    console.error('login user validation error:', error);
+    res.status(400);
     return;
   }
 
@@ -76,14 +97,14 @@ export const loginUser = async (req: Request, res: Response) => {
     const user = await User.findOne({ email });
 
     if (!user) {
-      res.status(404).json({ message: 'Email not found' });
+      res.status(404);
       return;
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.hashedPassword);
 
     if (!isPasswordValid) {
-      res.status(401).json({ message: 'Invalid password' });
+      res.status(401);
       return;
     }
 
@@ -95,26 +116,53 @@ export const loginUser = async (req: Request, res: Response) => {
       maxAge: cookieMaxAge,
     });
 
-    const { hashedPassword, ...userWithoutPassword } = user.toObject();
+    const userData = removeSensitiveData(user);
 
-    res.status(200).json(userWithoutPassword);
+    res.status(200).json(userData);
   } catch (error) {
-    res.status(500).json({ message: 'Error logging in', error });
+    res.status(500);
   }
 };
 
 export const logoutUser = async (req: Request, res: Response) => {
   res.clearCookie(cookieName);
 
-  res.status(200).json({ message: 'Logged out successfully' });
+  res.status(200);
+};
+
+export const getCurrentUser = async (req: Request, res: Response) => {
+  const token = req.cookies?.[cookieName];
+
+  if (!token) {
+    res.status(401);
+    return;
+  }
+
+  const decodedToken = jwt.verify(
+    token,
+    process.env.JWT_SECRET as string
+  ) as JwtPayload;
+
+  try {
+    const user = await User.findById(decodedToken?.userId);
+    if (!user) {
+      res.status(404);
+      return;
+    }
+
+    const userData = removeSensitiveData(user);
+
+    res.status(200).json(userData);
+  } catch (error) {
+    res.status(500);
+  }
 };
 
 export const getUserData = async (req: Request, res: Response) => {
   const { error } = getUserParams.safeParse(req.params);
 
   if (error) {
-    res.status(400).json({ message: 'Username is required' });
-    console.error('get user validation error:', error);
+    res.status(400);
     return;
   }
 
@@ -124,14 +172,14 @@ export const getUserData = async (req: Request, res: Response) => {
     const user = await User.findOne({ username });
 
     if (!user) {
-      res.status(404).json({ message: 'User not found' });
+      res.status(404);
       return;
     }
 
-    const { hashedPassword, ...userWithoutPassword } = user.toObject();
+    const userData = removeSensitiveData(user);
 
-    res.status(200).json(userWithoutPassword);
+    res.status(200).json(userData);
   } catch (error) {
-    res.status(500).json({ message: 'Error fetching user', error });
+    res.status(500);
   }
 };
